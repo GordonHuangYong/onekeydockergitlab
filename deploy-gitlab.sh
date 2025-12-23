@@ -149,29 +149,41 @@ services:
         gitlab_rails['time_zone'] = 'Asia/Shanghai'
         gitlab_rails['gitlab_default_can_create_group'] = true
         gitlab_rails['gitlab_default_projects_features_issues'] = true
-        
+
         # 使用容器自带的Postfix
-        postfix['enable'] = true
-        postfix['inet_interfaces'] = 'localhost'  # 只监听本地
-        postfix['smtp_use_tls'] = 'no'
+        # postfix['enable'] = true
+        # postfix['inet_interfaces'] = 'localhost'  # 只监听本地
+        # postfix['smtp_use_tls'] = 'no'
 
 
 
+        # gitlab_rails['smtp_enable'] = true
+        # gitlab_rails['smtp_address'] = "localhost"  # 容器内Postfix
+        # gitlab_rails['smtp_port'] = 25
+        # gitlab_rails['smtp_domain'] = '$DOMAIN'
+        # gitlab_rails['smtp_authentication'] = false
+        # gitlab_rails['smtp_tls'] = false
+        # gitlab_rails['gitlab_email_from'] = 'gitlab@$DOMAIN'
+        # gitlab_rails['smtp_enable_starttls_auto'] = false
+        # gitlab_rails['smtp_openssl_verify_mode'] = 'none'
+
+        # gitlab_rails['gitlab_email_enabled'] = true
+        # gitlab_rails['gitlab_email_display_name'] = 'GitLab 通知系统'
+        # gitlab_rails['gitlab_email_reply_to'] = 'noreply@$DOMAIN'
+        # gitlab_rails['gitlab_email_subject_suffix'] = ''
+        # gitlab_rails['gitlab_email_admin'] = 'hwangyong@dingtalk.com'
+        
+        # 邮件发送配置 (使用GitLab内置的Postfix)
         gitlab_rails['smtp_enable'] = true
-        gitlab_rails['smtp_address'] = "localhost"  # 容器内Postfix
+        gitlab_rails['smtp_address'] = "localhost"
         gitlab_rails['smtp_port'] = 25
-        gitlab_rails['smtp_domain'] = 'waytronic.tech'
-        gitlab_rails['smtp_authentication'] = false
-        gitlab_rails['smtp_tls'] = false
+        gitlab_rails['smtp_domain'] = "$DOMAIN"  # 替换为你的域名变量
         gitlab_rails['gitlab_email_from'] = 'gitlab@$DOMAIN'
-        gitlab_rails['smtp_enable_starttls_auto'] = false
-        gitlab_rails['smtp_openssl_verify_mode'] = 'none'
-
         gitlab_rails['gitlab_email_enabled'] = true
-        gitlab_rails['gitlab_email_display_name'] = 'GitLab 通知系统'
-        gitlab_rails['gitlab_email_reply_to'] = 'noreply@$DOMAIN'
-        gitlab_rails['gitlab_email_subject_suffix'] = ''
-        gitlab_rails['gitlab_email_admin'] = 'hwangyong@dingtalk.com'
+        
+        # 启用并配置内置的Postfix服务
+        postfix['enable'] = true
+        postfix['smtp_use_tls'] = 'no'
 
 
         gitlab_pages['enable'] = true
