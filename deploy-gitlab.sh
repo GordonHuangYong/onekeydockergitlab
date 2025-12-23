@@ -6,7 +6,7 @@ set -e
 # 安装 acme.sh（支持 100+ DNS 提供商，包括阿里云）
 # curl https://get.acme.sh | sh
 
-GITLAB_DIR="$(HOME)/gitlab"
+GITLAB_DIR="$HOME/gitlab"
 DOMAIN="gitlab.waytronic.tech"
 SECRETS_FILE="$GITLAB_DIR/secrets.env"
 
@@ -21,7 +21,7 @@ error() {
 
 # 检查依赖
 command -v openssl >/dev/null || error "需要 openssl，请先安装"
-command -v docker-compose >/dev/null || error "需要 docker-compose，请先安装"
+command -v docker compose >/dev/null || error "需要 docker compose，请先安装"
 
 # 创建目录
 mkdir -p "$GITLAB_DIR"/{nginx/ssl,postgres/data,redis/data,minio/data,gitlab/{config,logs,data},runner/config,backups}
@@ -358,8 +358,8 @@ cat > "$GITLAB_DIR/backups/renew-cert.sh" <<'EOF'
 #!/bin/bash
 set -e
 
-LOG_FILE="$(HOME)/gitlab/backups/cert-renew.log"
-GITLAB_DIR="$(HOME)/gitlab"
+LOG_FILE="$HOME/gitlab/backups/cert-renew.log"
+GITLAB_DIR="$HOME/gitlab"
 
 SSL_TARGET_DIR="${GITLAB_DIR}/nginx/ssl"
 
@@ -427,7 +427,7 @@ cat <<FINAL
 
 3. **启动服务**
    cd $GITLAB_DIR
-   docker-compose up -d
+   docker compose up -d
 
 4. **设置自动续期**
    crontab -e
