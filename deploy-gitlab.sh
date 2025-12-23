@@ -3,7 +3,10 @@
 
 set -e
 
-GITLAB_DIR="$HOME/gitlab"
+# 安装 acme.sh（支持 100+ DNS 提供商，包括阿里云）
+# curl https://get.acme.sh | sh
+
+GITLAB_DIR="$(HOME)/gitlab"
 DOMAIN="gitlab.waytronic.tech"
 SECRETS_FILE="$GITLAB_DIR/secrets.env"
 
@@ -355,9 +358,9 @@ cat > "$GITLAB_DIR/backups/renew-cert.sh" <<'EOF'
 #!/bin/bash
 set -e
 
-LOG_FILE="/home/$(whoami)/gitlab/backups/cert-renew.log"
-GITLAB_DIR="/home/$(whoami)/gitlab"
-CERT_LIVE_DIR="/etc/letsencrypt/live/gitlab.waytronic.tech"
+LOG_FILE="$(HOME)/gitlab/backups/cert-renew.log"
+GITLAB_DIR="$(HOME)/gitlab"
+
 SSL_TARGET_DIR="${GITLAB_DIR}/nginx/ssl"
 
 log() {
@@ -366,21 +369,26 @@ log() {
 
 log "=== 开始执行证书续期任务 ==="
 
-if sudo certbot renew --quiet; then
-    log "Certbot 续期成功或无需续期。"
-else
-    log "⚠️ Certbot 续期失败，请检查日志。"
-    exit 1
-fi
+wget -O acme.sh.install https://get.acme.sh
+chmod +x acme.sh.install
+./acme.sh.install --install
+cd ~/
+~/.acme.sh/acme.sh --issue --dns dns_aliyun \
+  -d waytronic.tech \
+  -d '*.waytronic.tech' \
+  --ecc \
+  --server letsencrypt
 
-if [ ! -f "${CERT_LIVE_DIR}/fullchain.pem" ]; then
-    log "❌ 证书文件不存在: ${CERT_LIVE_DIR}/fullchain.pem"
-    exit 1
-fi
+# 安装证书到目标目录
+~/.acme.sh/acme.sh --install-cert -d waytronic.tech \
+  --key-file ~/gitlab/nginx/ssl/privkey.pem \
+  --fullchain-file ~/gitlab/nginx/ssl/fullchain.pem  
+
+log "=== 完成证书续期任务 ==="
+
 
 mkdir -p "$SSL_TARGET_DIR"
-sudo cp "${CERT_LIVE_DIR}/fullchain.pem" "$SSL_TARGET_DIR/"
-sudo cp "${CERT_LIVE_DIR}/privkey.pem" "$SSL_TARGET_DIR/"
+
 sudo chown -R 1000:1000 "$SSL_TARGET_DIR"
 sudo chmod 600 "$SSL_TARGET_DIR"/*.pem
 
@@ -412,15 +420,9 @@ cat <<FINAL
 📌 下一步操作：
 
 1. **申请泛域名证书**（首次）：
-   sudo apt install -y certbot python3-pip
-   sudo pip3 install certbot-dns-aliyun
-   # 需要手动创建 /etc/letsencrypt/secrets/aliyun.ini（主要是阿里云 AccessKey）
-   sudo certbot certonly --dns-aliyun \\
-     --dns-aliyun-credentials /etc/letsencrypt/secrets/aliyun.ini \\
-     -d $DOMAIN -d '*.$DOMAIN'
+   
 
 2. **复制证书**
-   sudo cp /etc/letsencrypt/live/$DOMAIN/{fullchain,privkey}.pem $GITLAB_DIR/nginx/ssl/
    sudo chown 1000:1000 $GITLAB_DIR/nginx/ssl/*.pem
 
 3. **启动服务**
