@@ -24,12 +24,21 @@ command -v openssl >/dev/null || error "需要 openssl，请先安装"
 command -v docker compose >/dev/null || error "需要 docker compose，请先安装"
 
 # 创建目录
-mkdir -p "$GITLAB_DIR"/{nginx/ssl,postgres/data,redis/data,minio/data,gitlab/{config,logs,data},runner/config,backups}
+# mkdir -p "$GITLAB_DIR"/{nginx/ssl,postgres/data,redis/data,minio/data,gitlab/{config,logs,data},runner/config,backups}
+mkdir -p "$GITLAB_DIR/nginx/ssl" \
+         "$GITLAB_DIR/postgres/data" \
+         "$GITLAB_DIR/redis/data" \
+         "$GITLAB_DIR/minio/data" \
+         "$GITLAB_DIR/gitlab/config" \
+         "$GITLAB_DIR/gitlab/logs" \
+         "$GITLAB_DIR/gitlab/data" \
+         "$GITLAB_DIR/runner/config" \
+         "$GITLAB_DIR/backups"
 
 # === 密码管理 ===
 if [ -f "$SECRETS_FILE" ]; then
     log "检测到已存在 secrets.env，加载现有密码..."
-    source "$SECRETS_FILE"
+    . "$SECRETS_FILE"
 else
     log "生成强密码..."
     DB_PASSWORD=$(openssl rand -base64 32 | tr -d '\n' | cut -c1-32)
@@ -100,16 +109,16 @@ services:
     networks:
       - gitlab-net
 
-  postfix:
-    image: catatnight/postfix:latest
-    restart: always
-    environment:
-      maildomain: waytronic.tech
-      smtp_user: noreply:$SMTP_PASS_YAML
-    ports:
-      - "127.0.0.1:2525:25"
-    networks:
-      - gitlab-net
+  # postfix:
+  #   image: catatnight/postfix:latest
+  #   restart: always
+  #   environment:
+  #     maildomain: waytronic.tech
+  #     smtp_user: noreply:$SMTP_PASS_YAML
+  #   ports:
+  #     - "127.0.0.1:2525:25"
+  #   networks:
+  #     - gitlab-net
 
   gitlab:
     image: gitlab/gitlab-ce:latest
@@ -119,7 +128,7 @@ services:
       - postgresql
       - redis
       - minio
-      - postfix
+      # - postfix
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'https://$DOMAIN'
@@ -137,13 +146,33 @@ services:
         gitlab_rails['redis_host'] = 'redis'
         gitlab_rails['redis_port'] = 6379
 
+        gitlab_rails['time_zone'] = 'Asia/Shanghai'
+        gitlab_rails['gitlab_default_can_create_group'] = true
+        gitlab_rails['gitlab_default_projects_features_issues'] = true
+        
+        # 使用容器自带的Postfix
+        postfix['enable'] = true
+        postfix['inet_interfaces'] = 'localhost'  # 只监听本地
+        postfix['smtp_use_tls'] = 'no'
+
+
+
         gitlab_rails['smtp_enable'] = true
-        gitlab_rails['smtp_address'] = 'postfix'
+        gitlab_rails['smtp_address'] = "localhost"  # 容器内Postfix
         gitlab_rails['smtp_port'] = 25
         gitlab_rails['smtp_domain'] = 'waytronic.tech'
         gitlab_rails['smtp_authentication'] = false
         gitlab_rails['smtp_tls'] = false
         gitlab_rails['gitlab_email_from'] = 'gitlab@$DOMAIN'
+        gitlab_rails['smtp_enable_starttls_auto'] = false
+        gitlab_rails['smtp_openssl_verify_mode'] = 'none'
+
+        gitlab_rails['gitlab_email_enabled'] = true
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab 通知系统'
+        gitlab_rails['gitlab_email_reply_to'] = 'noreply@$DOMAIN'
+        gitlab_rails['gitlab_email_subject_suffix'] = ''
+        gitlab_rails['gitlab_email_admin'] = 'hwangyong@dingtalk.com'
+
 
         gitlab_pages['enable'] = true
         pages_external_url 'http://pages.$DOMAIN/'
@@ -354,6 +383,7 @@ send_timeout 3600;
 EOF
 
 # === renew-cert.sh（略，同前）===
+mkdir -p $GITLAB_DIR/backups
 cat > "$GITLAB_DIR/backups/renew-cert.sh" <<'EOF'
 #!/bin/bash
 set -e
